@@ -37,7 +37,7 @@ The content of `skills/ai-checker/` is byte-identical to the released
 publishes a `kit-manifest.json` with the SHA-256 of every artifact; compare with
 `sha256sum` if you want proof instead of trust.
 
-Current release: kit 22.0, checker 4.11.
+Current release: kit 23.0, checker 4.12.
 
 ---
 
@@ -81,7 +81,7 @@ Der Inhalt von `skills/ai-checker/` ist byte-gleich mit dem veröffentlichten
 Veröffentlichung trägt eine `kit-manifest.json` mit den SHA-256-Prüfsummen aller
 Artefakte; vergleichen Sie mit `sha256sum`, wenn Sie einen Beleg wollen.
 
-Aktuelle Ausgabe: Kit 22.0, Prüfprogramm 4.11.
+Aktuelle Ausgabe: Kit 23.0, Prüfprogramm 4.12.
 
 ## Lizenz
 

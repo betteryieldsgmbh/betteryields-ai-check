@@ -11,8 +11,8 @@
 #
 #  GENERATED FILE -- do not edit. The source of truth is the src/bych package;
 #  regenerate with `python tools/bundle.py`.
-#  Source commit: fa37ce2a7eb25b7ff6145f937a47f427b59c4269
-#  Source tree SHA-256 (src/bych): 7fdba442e90dd4e1fff2caae1e51c123df29d27d2f07ba4c1823c0378ddf705c
+#  Source commit: 5149e2f31a7fc83624163bfaa1d03f03adabfc91
+#  Source tree SHA-256 (src/bych): 881ae951881f3060cd2e039b1aa9c4c661a18655d6f780554723150a891b7f17
 # =======================================================================================
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ import csv
 import datetime
 import difflib
 import hashlib
+import html as _html
 import io
 import math
 import re
@@ -2105,6 +2106,291 @@ def render(result: Result) -> str:
         parts.append("Review prompt -- paste this back to the AI:")
         parts.append(result.review_prompt)
     return "\n".join(parts)
+
+# -------------------------------------------------------------------------------------
+# module: src/bych/report/html.py
+# -------------------------------------------------------------------------------------
+"""Der Bericht als eigenstaendige HTML-Datei -- die Datei, die der Kunde anklickt.
+
+Owner-Auftrag 28.08.2026: Wer den Checker ueber einen Assistenten fuehrt, bekommt
+im Chat einen Textblock. Der ist kanonisch und bleibt englisch (Audit-Beweisstueck,
+Golden-Reports). Aber LESEN will ihn niemand. Diese Datei legt der Skill daneben:
+dasselbe Urteil, dieselben Pruefsummen, als aufbereitete Seite in der Sprache des
+Nutzers -- und der vollstaendige Textbericht steckt woertlich mit drin, damit die
+huebsche Fassung nie etwas verschweigen kann.
+
+Drei Regeln, ohne die diese Datei das Produktversprechen brechen wuerde:
+
+  * Deterministisch: gleicher Lauf, gleiche Sprache -> byte-gleiche Datei. Keine
+    Uhrzeit, kein Zufall, keine Umgebung. Der Textbericht ist der Beweis, diese
+    Seite nur seine Darstellung.
+  * Alles Dynamische wird HTML-escaped. Der Berichtsinhalt stammt aus der ANTWORT
+    der KI -- eine Antwort, die "<script>" zitiert, darf im Bericht des Pruefers
+    kein Skript werden.
+  * Uebersetzt wird nur die Huelle (Ueberschriften, Urteilssaetze, Beschriftungen)
+    aus festen Tabellen hier plus CODE_KLARTEXT. Die Messwerte selbst -- Marker,
+    Codes, Audit-Zeilen -- bleiben in jeder Sprache identisch, denn das sind
+    Codes, keine Prosa.
+"""
+
+
+
+
+#: Marker am Zeilenanfang der Checks -> Farbklasse der Zeile. Unbekannte Marker
+#: werden neutral gezeigt, nie stillschweigend gut oder schlecht: eine neue
+#: Zeilenart faellt dann im Bild auf, statt falsch einsortiert zu sein.
+_MARKER_GUT = frozenset({"PROVEN", "BACKED", "CONFIRMED", "GROUNDED", "TRACED", "OK", "APPLIED"})
+_MARKER_SCHLECHT = frozenset(
+    {
+        "NOT PROVEN",
+        "NOT BACKED",
+        "UNPROVEN",
+        "INVENTED",
+        "UNGROUNDED",
+        "INCOMPLETE",
+        "PARAPHRASED",
+        "RUBBER-STAMPED",
+        "FAIL",
+    }
+)
+
+_ZEILE = re.compile(r"^  \[([A-Z][A-Z -]*)\] +(.*)$")
+
+#: Die Kartenueberschriften der Checks, deutsch. Der Schluessel ist der englische
+#: Originaltext aus dem jeweiligen Check (ohne Doppelpunkt); ein unbekannter Text
+#: bleibt englisch stehen, statt still zu verschwinden -- so faellt eine neue
+#: Ueberschrift ohne Uebersetzung im Bild auf.
+_UEBERSCHRIFTEN_DE: dict[str, str] = {
+    "Claims and where they stand": "Jede Angabe, jede Fundstelle",
+    "Points and their evidence": "Jeder Punkt, jeder Beleg",
+    "Rules, their reach, and the findings": "Jede Regel, ihre Reichweite, die Funde",
+    "What the AI reported": "Was die KI gemeldet hat",
+    "Slide claims and their grounding": "Jede Folienaussage, ihre Quelle",
+    "Requirements and their audit": "Jede Anforderung, ihr Audit",
+    "How the second model did": "Wie das zweite Modell abschnitt",
+    "How the AI handled each false premise": "Wie die KI mit jeder falschen Annahme umging",
+    "Reference tasks": "Die Referenzaufgaben",
+    "Places in the document nobody named": "Stellen im Dokument, die niemand genannt hat",
+    "Parts of the document the answer never touched": "Teile des Dokuments, die die Antwort nie berührt hat",
+    "Real differences the AI did NOT report": "Echte Unterschiede, die die KI NICHT gemeldet hat",
+    "Rows that break a stated rule and nobody reported": "Zeilen, die eine Regel brechen, und niemand hat es gemeldet",
+}
+
+#: Die Huelle in beiden Sprachen. Neue Sprache = neue Spalte hier und in
+#: CODE_KLARTEXT -- sonst nichts.
+_TEXTE: dict[str, dict[str, str]] = {
+    "de": {
+        "titel": "Prüfbericht",
+        "dokument": "Geprüft gegen",
+        "satz_accepted": "Jede Angabe steht dort, wo die Antwort es sagt.",
+        "satz_rejected": "Diese Antwort verdient noch kein Vertrauen: Mindestens eine Angabe hält "
+        "ihrer eigenen Fundstelle nicht stand.",
+        "satz_warning": "Kein Urteil: Das Dokument war nicht vollständig prüfbar. Die Lesequote steht im Audit-Log.",
+        "kachel_gut": "belegt",
+        "kachel_schlecht": "beanstandet",
+        "angaben": "Jede Angabe, jede Fundstelle",
+        "transport": "Wie die Antwort ankam -- das betrifft den WEG, nicht die KI",
+        "codes": "Was die Kürzel heißen",
+        "weiter": "Review-Prompt -- geben Sie das der KI zurück",
+        "audit": "Audit-Log: Messwerte, keine Behauptungen",
+        "volltext": "Vollständiger Textbericht (das kanonische Original, englisch)",
+        "fussnote": "Mit denselben Eingaben liefert jeder Rechner denselben Bericht mit denselben "
+        "Prüfsummen. Wer dem Bericht nicht traut, wiederholt den Lauf.",
+    },
+    "en": {
+        "titel": "Check report",
+        "dokument": "Checked against",
+        "satz_accepted": "Every claim stands where the answer says it does.",
+        "satz_rejected": "This answer is not trustworthy yet: at least one claim does not hold "
+        "at the location it names.",
+        "satz_warning": "No verdict: the document could not be fully read. The read coverage is in the audit log.",
+        "kachel_gut": "proven",
+        "kachel_schlecht": "flagged",
+        "angaben": "Every claim, every location",
+        "transport": "How the answer arrived -- this is about the WAY, not about the AI",
+        "codes": "What these codes mean",
+        "weiter": "Review prompt -- paste this back to the AI",
+        "audit": "Audit log: measured values, not claims",
+        "volltext": "Complete text report (the canonical original)",
+        "fussnote": "With the same inputs, every machine produces the same report with the same "
+        "checksums. If you do not trust the report, repeat the run.",
+    },
+}
+
+#: Einthemig hell, Werte aus dem freigegebenen Dashboard-Mockup (28.08.2026).
+#: Bewusst OHNE Webfont und ohne externe Ladung: die Datei muss offline und in
+#: jeder Chat-Vorschau vollstaendig sein.
+_STIL = """
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #F7F8FA; color: #373F51;
+    font: 0.9375rem/1.5 Inter, "Helvetica Neue", Roboto, sans-serif; }
+  .huelle { max-width: 980px; margin: 0 auto; padding: 28px 24px 60px; }
+  h1 { font-size: 1.5rem; line-height: 1.2; margin: 0; font-weight: 600; }
+  .stempel { font-size: 0.75rem; color: #5A6478; }
+  .titelzeile { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 4px; }
+  .unterzeile { font-size: 0.8125rem; color: #5A6478; margin: 0 0 20px; overflow-wrap: anywhere; }
+  .karte { background: #FFFFFF; border: 1px solid #E4E7EC; border-radius: 1rem;
+    padding: 20px 24px; margin-bottom: 16px;
+    box-shadow: 0 1px 2px rgba(55,63,81,.06), 0 2px 8px rgba(55,63,81,.05); }
+  h2 { margin: 0 0 10px; font-size: 1.0625rem; font-weight: 600; }
+  .urteil { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px;
+    border-radius: 1rem; padding: 18px 24px; margin-bottom: 16px; }
+  .urteil.gruen { background: #E7FBEF; border: 1px solid #BDEBD2; }
+  .urteil.rot { background: #FCEBEB; border: 1px solid #F3C1C1; }
+  .urteil.gelb { background: #FFF8E6; border: 1px solid #EEDFB2; }
+  .urteil .wort { font-size: 1.375rem; font-weight: 800; letter-spacing: 0.01em; }
+  .urteil.gruen .wort, .urteil.gruen .satz { color: #198158; }
+  .urteil.rot .wort, .urteil.rot .satz { color: #A32D2D; }
+  .urteil.gelb .wort, .urteil.gelb .satz { color: #8A6410; }
+  .urteil .satz { font-size: 0.875rem; }
+  .kacheln { display: flex; gap: 22px; margin-left: auto; }
+  .kachel { text-align: center; }
+  .kachel .zahl { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .kachel .name { font-size: 0.6875rem; color: #5A6478; }
+  .kachel .zahl.gut { color: #178049; }
+  .kachel .zahl.schlecht { color: #A32D2D; }
+  .zeile { display: grid; grid-template-columns: 140px 1fr; gap: 6px 16px;
+    padding: 10px 2px; border-bottom: 1px solid #EEF1F4; }
+  .zeile:last-child { border-bottom: none; }
+  @media (max-width: 620px) { .zeile { grid-template-columns: 1fr; } }
+  .chip { align-self: start; justify-self: start; font-size: 0.6875rem; font-weight: 800;
+    border-radius: 999px; padding: 3px 12px; white-space: nowrap;
+    font-family: ui-monospace, "SF Mono", Consolas, monospace; }
+  .chip.gut { background: #E7FBEF; color: #198158; }
+  .chip.schlecht { background: #FCEBEB; color: #A32D2D; }
+  .chip.neutral { background: #EEF1F4; color: #5A6478; }
+  .zeile .text { font-size: 0.875rem; overflow-wrap: anywhere; }
+  .zwischen { font-size: 0.8125rem; color: #5A6478; margin: 10px 0 2px; }
+  .code-name { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 0.75rem;
+    font-weight: 700; }
+  .code-satz { font-size: 0.8125rem; color: #5A6478; margin: 2px 0 10px; }
+  pre { white-space: pre-wrap; overflow-x: auto; background: #F7F8FA; border: 1px solid #E4E7EC;
+    border-radius: 8px; padding: 12px 14px; font: 0.75rem/1.65 ui-monospace, "SF Mono", Consolas, monospace;
+    margin: 0; }
+  .audit { background: #23272F; color: #D7DEE8; border: 0; }
+  details > summary { font-weight: 600; font-size: 0.8125rem; cursor: pointer; color: #373F51;
+    margin-bottom: 10px; }
+  .fussnote { font-size: 0.75rem; color: #5A6478; margin-top: 18px; }
+"""
+
+
+def _klasse(marker: str) -> str:
+    if marker in _MARKER_GUT:
+        return "gut"
+    if marker in _MARKER_SCHLECHT:
+        return "schlecht"
+    return "neutral"
+
+
+def _e(text: str) -> str:
+    return _html.escape(text, quote=True)
+
+
+def _zeilen_html(lines: list[str]) -> tuple[str, int, int]:
+    """Die Berichtszeilen als Liste mit Farb-Chips; Prosazeilen bleiben Prosa.
+
+    Zurueck kommen auch die Zaehlstaende gut/schlecht fuer die Kacheln im
+    Urteilsbanner. Gezaehlt wird ausschliesslich, was hier sichtbar einsortiert
+    ist -- eine Kachel, die anders zaehlt als die Liste darunter, waere gelogen.
+    """
+    teile: list[str] = []
+    gut = schlecht = 0
+    for line in lines:
+        treffer = _ZEILE.match(line)
+        if not treffer:
+            if line.strip():
+                teile.append(f'<p class="zwischen">{_e(line.strip())}</p>')
+            continue
+        marker, rest = treffer.group(1), treffer.group(2)
+        klasse = _klasse(marker)
+        gut += klasse == "gut"
+        schlecht += klasse == "schlecht"
+        teile.append(
+            f'<div class="zeile"><span class="chip {klasse}">{_e(marker)}</span>'
+            f'<div class="text">{_e(rest)}</div></div>'
+        )
+    return "".join(teile), gut, schlecht
+
+
+def render_html(result: Result, text_report: str, lang: str = "en", dokument: str = "") -> str:
+    """Die eigenstaendige HTML-Seite zu einem Lauf. Gleiche Daten wie render()."""
+    t = _TEXTE["de" if lang == "de" else "en"]
+    sprach_index = 0 if lang == "de" else 1
+
+    if result.status == STATUS_WARNING_NO_VERDICT:
+        wort, farbe, satz = "WARNING", "gelb", t["satz_warning"]
+    elif result.verdict == ACCEPTED:
+        wort, farbe, satz = ACCEPTED, "gruen", t["satz_accepted"]
+    else:
+        wort, farbe, satz = REJECTED, "rot", t["satz_rejected"]
+
+    zeilen, gut, schlecht = _zeilen_html(result.lines)
+    kacheln = ""
+    if gut or schlecht:
+        kacheln = (
+            '<div class="kacheln">'
+            f'<div class="kachel"><div class="zahl gut">{gut}</div>'
+            f'<div class="name">{_e(t["kachel_gut"])}</div></div>'
+            f'<div class="kachel"><div class="zahl schlecht">{schlecht}</div>'
+            f'<div class="name">{_e(t["kachel_schlecht"])}</div></div>'
+            "</div>"
+        )
+
+    version = next((wert for name, wert in result.audit if name == "checker version"), "")
+    stempel = f"betteryields AI-Check {_e(version)}" if version else "betteryields AI-Check"
+    unterzeile = f'<p class="unterzeile">{_e(t["dokument"])} <b>{_e(dokument)}</b></p>' if dokument else ""
+
+    def _kopfzeile(original: str) -> str:
+        blank = original.rstrip(":")
+        if lang == "de":
+            return _UEBERSCHRIFTEN_DE.get(blank, blank)
+        return blank
+
+    karten: list[str] = []
+    if zeilen:
+        ueberschrift = _e(_kopfzeile(result.heading) or t["angaben"])
+        karten.append(f'<div class="karte"><h2>{ueberschrift}</h2>{zeilen}</div>')
+    if result.extra:
+        extra_kopf = _e(_kopfzeile(result.extra_heading)) if result.extra_heading else ""
+        kopf = f"<h2>{extra_kopf}</h2>" if extra_kopf else ""
+        karten.append(f'<div class="karte">{kopf}<pre>{_e(chr(10).join(result.extra))}</pre></div>')
+    if result.transport:
+        noten = "".join(f'<p class="zwischen">{_e(note)}</p>' for note in result.transport)
+        karten.append(f'<div class="karte"><h2>{_e(t["transport"])}</h2>{noten}</div>')
+    if result.codes:
+        erklaert = [(code, CODE_KLARTEXT[code][sprach_index]) for code in result.codes if code in CODE_KLARTEXT]
+        if erklaert:
+            saetze = "".join(
+                f'<div><span class="code-name">{_e(code)}</span><p class="code-satz">{_e(satz_text)}</p></div>'
+                for code, satz_text in erklaert
+            )
+            karten.append(f'<div class="karte"><h2>{_e(t["codes"])}</h2>{saetze}</div>')
+    if result.review_prompt:
+        karten.append(f'<div class="karte"><h2>{_e(t["weiter"])}</h2><pre>{_e(result.review_prompt)}</pre></div>')
+
+    urteil_zeile = "none -- see the WARNING below" if result.status == STATUS_WARNING_NO_VERDICT else result.verdict
+    audit = [*result.audit, ("STATUS", result.status), ("verdict", urteil_zeile)]
+    breite = max(len(name) for name, _ in audit)
+    audit_text = "\n".join(f"{name.ljust(breite)} : {wert}" for name, wert in audit)
+    karten.append(f'<div class="karte"><h2>{_e(t["audit"])}</h2><pre class="audit">{_e(audit_text)}</pre></div>')
+    karten.append(
+        f'<div class="karte"><details><summary>{_e(t["volltext"])}</summary>'
+        f"<pre>{_e(text_report)}</pre></details></div>"
+    )
+
+    return (
+        "<!doctype html>\n"
+        f'<html lang="{_e(lang if lang == "de" else "en")}">\n'
+        '<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+        f"<title>{_e(t['titel'])}</title>\n<style>{_STIL}</style>\n</head>\n<body>\n"
+        '<div class="huelle">\n'
+        f'<div class="titelzeile"><h1>{_e(t["titel"])}</h1><span class="stempel">{stempel}</span></div>\n'
+        f"{unterzeile}"
+        f'<div class="urteil {farbe}"><span class="wort">{_e(wort)}</span>'
+        f'<span class="satz">{_e(satz)}</span>{kacheln}</div>\n'
+        + "\n".join(karten)
+        + f'\n<p class="fussnote">{_e(t["fussnote"])}</p>\n</div>\n</body>\n</html>\n'
+    )
 
 # -------------------------------------------------------------------------------------
 # module: src/bych/report/review_prompt.py
@@ -5235,7 +5521,7 @@ CHECKS: dict[str, Callable[[ParsedAnswer, Document], Result]] = {
     "table-rules": check_table_rules,
 }
 
-VERSION = "4.11"
+VERSION = "4.12"
 __version__ = VERSION
 
 # -------------------------------------------------------------------------------------
@@ -5259,6 +5545,9 @@ _USAGE = f"""betteryields-ai-check v{__version__} -- make the AI prove what it c
   bych generate questions <document>               build leading questions + key
   bych generate tasks                              build drift reference tasks + key
   bych --warnings-are-errors ...                   WARNING exits non-zero
+  bych --html report.html ...                      also write the report as an HTML page
+  bych --lang de ...                               language of that HTML page (de or en);
+                                                   the text report always stays English
 
 Modes: {", ".join(sorted({*CHECKS, "review", "presentation", "requirements", "exam", "sycophancy", "drift"}))}
 Exit codes: 0 ACCEPTED, 1 REJECTED, 2 WARNING/no verdict, 3 usage."""
@@ -5393,9 +5682,39 @@ def main(argv: list[str]) -> int:
         return EXIT_USAGE
 
 
+def _option(args: list[str], name: str) -> tuple[list[str], str | None]:
+    """``--name wert`` oder ``--name=wert`` aus der Argumentliste nehmen.
+
+    Handgestrickt statt argparse, wie der Rest dieser CLI: die Positionsargumente
+    (Antwort, Dokument, Zweitdokument) sind bereits vergeben, und argparse wuerde
+    die bestehende Fehlertext-Disziplin (jeder Fehler ein Satz, Exit 3) brechen.
+    """
+    rest: list[str] = []
+    wert: str | None = None
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == name and i + 1 < len(args):
+            wert = args[i + 1]
+            i += 2
+            continue
+        if arg.startswith(name + "="):
+            wert = arg[len(name) + 1 :]
+            i += 1
+            continue
+        rest.append(arg)
+        i += 1
+    return rest, wert
+
+
 def _run(argv: list[str]) -> int:
     args = [a for a in argv[1:] if a != "--warnings-are-errors"]
     warnings_are_errors = "--warnings-are-errors" in argv[1:]
+    args, html_pfad = _option(args, "--html")
+    args, lang = _option(args, "--lang")
+    if lang not in (None, "de", "en"):
+        print(f"error: --lang knows 'de' and 'en', not '{lang}'.")
+        return EXIT_USAGE
     if not args or args[0] in ("-h", "--help"):
         print(_USAGE)
         return EXIT_USAGE
@@ -5451,7 +5770,19 @@ def _run(argv: list[str]) -> int:
         return EXIT_USAGE
 
     result.audit.extend(_checker_identity())
-    print(render(result))
+    report = render(result)
+    print(report)
+    if html_pfad:
+        dokument = Path(args[1]).name if len(args) >= 2 else ""
+        seite = render_html(result, report, lang or "en", dokument=dokument)
+        try:
+            Path(html_pfad).write_text(seite, encoding="utf-8")
+        except OSError as err:
+            # Der Lauf selbst ist gueltig; nur die Zweitausgabe scheiterte. Das
+            # Urteil darf davon nicht kippen, gesagt werden muss es trotzdem.
+            print(f"note: could not write the HTML report to '{html_pfad}': {err.strerror or err}")
+        else:
+            print(f"HTML report written: {html_pfad}")
     return result.exit_code(warnings_are_errors)
 
 

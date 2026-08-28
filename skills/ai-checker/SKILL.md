@@ -43,9 +43,16 @@ someone else repeat the run and get the same verdict.
    It prints the exact format the checker parses. A copy in your own words drifts
    away from the checker on its next release.
 3. **Write your answer in that format** and save it as a UTF-8 text file.
-4. **Run the check:**
-   `python3 ${CLAUDE_SKILL_DIR}/betteryields-ai-check.py <answer.txt> <document> [second document]`
-5. **Show the report unchanged.**
+4. **Run the check, and always ask for the clickable report file too:**
+   `python3 ${CLAUDE_SKILL_DIR}/betteryields-ai-check.py --html report.html --lang <de|en> <answer.txt> <document> [second document]`
+   Pick `--lang` from the language the person is writing in: German gets `de`,
+   everyone else gets `en`. The flag only translates the HTML page's framing;
+   the text report and every code stay English in both, so two people on two
+   continents still read the same verdict.
+5. **Show the report unchanged, and hand the person `report.html` as a file.**
+   The page shows the same run the text shows: the verdict, every claim with
+   its location, the audit log, and the complete text report embedded. It is
+   the script's output, not yours -- never edit it, never rebuild it by hand.
 6. **If REJECTED: fix exactly what the report names, then run it again.** The
    report names every place, not a sample. Repeat until ACCEPTED or until the
    person tells you to stop; say how many rounds it took.
