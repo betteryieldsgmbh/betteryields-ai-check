@@ -1,0 +1,16 @@
+{
+  "name": "betteryields",
+  "description": "Betteryields tools for measured AI quality: deterministic checks instead of trust.",
+  "owner": {
+    "name": "Betteryields GmbH",
+    "email": "info@betteryields.ai",
+    "url": "https://www.betteryields.ai"
+  },
+  "plugins": [
+    {
+      "name": "betteryields-ai-check",
+      "source": "./",
+      "description": "Deterministic checker for AI answers about documents. Verifies every claim against the docx, pdf, xlsx or pptx it cites, quote by quote, and returns a hard ACCEPTED or REJECTED with an audit log and the SHA-256 of every input."
+    }
+  ]
+}
