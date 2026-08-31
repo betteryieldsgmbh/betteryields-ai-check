@@ -1,0 +1,169 @@
+<!-- Vorlage für den nothing-missed-Bericht im Betteryields-Stil (styleguide:
+     identity/colors.md, identity/typography.md, layout/layout.md).
+     Der Inhalt steht FEST im HTML -- die Seite ist auch ohne JavaScript
+     vollständig lesbar; das Skript liefert nur die Filter als Zugabe.
+     Die Sitzung ersetzt beim Füllen NUR die markierten Bereiche
+     (META-ANFANG/ENDE, ZEILEN-ANFANG/ENDE, BLOCKADEN-ANFANG/ENDE) und die
+     Kachelzahlen; Layout, Stile und Skript bleiben unverändert. -->
+<title>Laufkarte nothing-missed</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --canvas: #F7F8FA; --surface: #FFFFFF; --text: #373F51; --text2: #5A6478;
+    --linie: #E4E7EC; --linie-weich: #EEF1F4;
+    --mint: #7BF1A8; --mint-soft: #E7FBEF; --akzent: #1F9D6B;
+    --warngrund: #FBF0CC; --fehler: #DC2626; --fehlergrund: #FBEAEA;
+    --schatten: 0 1px 2px rgba(55,63,81,.06), 0 2px 8px rgba(55,63,81,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --canvas: #20242E; --surface: #2A2F3B; --text: #EEF1F4; --text2: #A2AEBB;
+      --linie: #3A4150; --linie-weich: #333A48;
+      --mint-soft: #23453A; --akzent: #7BF1A8;
+      --warngrund: #4A3E1B; --fehler: #F2938E; --fehlergrund: #47262B;
+      --schatten: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --canvas: #20242E; --surface: #2A2F3B; --text: #EEF1F4; --text2: #A2AEBB;
+    --linie: #3A4150; --linie-weich: #333A48;
+    --mint-soft: #23453A; --akzent: #7BF1A8;
+    --warngrund: #4A3E1B; --fehler: #F2938E; --fehlergrund: #47262B;
+    --schatten: none;
+  }
+  body { background: var(--canvas); color: var(--text); margin: 0;
+         font: 400 15px/1.5 Inter, "Helvetica Neue", Arial, sans-serif; }
+  main { max-width: 880px; margin: 0 auto; padding: 32px 20px 64px; }
+  .marke-kopf { display: flex; align-items: baseline; justify-content: space-between;
+                flex-wrap: wrap; gap: 8px; }
+  .wortmarke { font-weight: 700; letter-spacing: -0.01em; }
+  .wortmarke small { font-weight: 400; color: var(--text2); margin-left: 8px; font-size: 13px; }
+  .mintbalken { height: 4px; background: var(--mint); border-radius: 2px; margin: 10px 0 22px; }
+  h1 { font-size: 28px; line-height: 1.2; letter-spacing: -0.01em; font-weight: 600; margin: 0 0 6px; }
+  .meta { color: var(--text2); font-size: 13px; margin: 0 0 24px; }
+  .kacheln { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+             gap: 12px; margin-bottom: 24px; }
+  .kachel { background: var(--surface); border: 1px solid var(--linie); border-radius: 16px;
+            box-shadow: var(--schatten); padding: 14px 16px; text-align: left;
+            font: inherit; color: inherit; cursor: pointer; }
+  .kachel b { display: block; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kachel span { color: var(--text2); font-size: 13px; }
+  .kachel:hover { border-color: var(--akzent); }
+  .kachel:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+  .kachel.aktiv { background: var(--mint-soft); border-color: var(--akzent); }
+  .karte { background: var(--surface); border: 1px solid var(--linie); border-radius: 16px;
+           box-shadow: var(--schatten); overflow: hidden; }
+  .tabellenhuelle { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th { text-align: left; font-weight: 600; font-size: 13px; color: var(--text2);
+       padding: 12px 16px; border-bottom: 1px solid var(--linie); }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--linie-weich); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.nr { color: var(--text2); font-variant-numeric: tabular-nums; width: 2.5em; }
+  td.art { color: var(--text2); font-size: 13px; white-space: nowrap; }
+  .chip { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 999px;
+          padding: 3px 12px; white-space: nowrap; color: var(--text); }
+  .chip-gemessen { background: var(--mint-soft); }
+  .chip-urteil { background: var(--warngrund); }
+  .chip-offen { background: var(--linie-weich); color: var(--text2); }
+  .chip-rot { background: var(--fehlergrund); color: var(--fehler); }
+  .chip-verworfen { background: var(--linie-weich); color: var(--text2); }
+  tr[data-s="verworfen"] td { color: var(--text2); }
+  details { font-size: 13px; }
+  details summary { cursor: pointer; color: var(--akzent); font-weight: 500; list-style: none; }
+  details summary::before { content: "Quelle anzeigen"; }
+  details[open] summary::before { content: "Quelle verbergen"; }
+  details summary:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+  details p { margin: 6px 0 0; color: var(--text2); }
+  h2 { font-size: 20px; line-height: 1.3; font-weight: 600; margin: 32px 0 12px; }
+  .blockade { background: var(--fehlergrund); border: 1px solid var(--linie);
+              border-left: 4px solid var(--fehler); border-radius: 16px;
+              padding: 12px 16px; margin-bottom: 10px; }
+  .blockade time { font-size: 12px; font-weight: 600; color: var(--fehler); }
+  .blockade p { margin: 4px 0 0; font-size: 13px; }
+  .leer { color: var(--text2); font-style: italic; }
+  footer { margin-top: 36px; color: var(--text2); font-size: 12px; line-height: 1.4;
+           border-top: 1px solid var(--linie); padding-top: 12px; }
+  [data-verborgen="ja"] { display: none; }
+</style>
+<main>
+  <div class="marke-kopf">
+    <div class="wortmarke">Betteryields<small>AI-Check</small></div>
+  </div>
+  <div class="mintbalken"></div>
+  <h1>Laufkarte nothing-missed</h1>
+  <!-- META-ANFANG -->
+  <p class="meta">Sitzung BEISPIEL-SITZUNG · Stand 01.01.2026</p>
+  <!-- META-ENDE -->
+  <div class="kacheln">
+    <!-- KACHEL-ANFANG: Zahlen beim Füllen ersetzen -->
+    <button class="kachel aktiv" data-filter=""><b>4</b><span>Positionen</span></button>
+    <button class="kachel" data-filter="erledigt"><b>1</b><span>erledigt</span></button>
+    <button class="kachel" data-filter="offen"><b>1</b><span>offen</span></button>
+    <button class="kachel" data-filter="rot"><b>1</b><span>rote Befunde</span></button>
+    <button class="kachel" data-filter="verworfen"><b>1</b><span>verworfen</span></button>
+    <!-- KACHEL-ENDE -->
+  </div>
+  <div class="karte tabellenhuelle">
+    <table>
+      <thead><tr><th>Nr.</th><th>Art</th><th>Position (Wortlaut)</th><th>Fundstelle</th><th>Status</th></tr></thead>
+      <tbody>
+        <!-- ZEILEN-ANFANG: je Position eine Zeile nach exakt diesem Muster -->
+        <tr data-s="erledigt">
+          <td class="nr">1</td>
+          <td class="art">Owner</td>
+          <td>Beispiel: der Bericht bekommt drei Kapitel.</td>
+          <td>Kapitel 1 bis 3</td>
+          <td><span class="chip chip-gemessen">erledigt</span></td>
+        </tr>
+        <tr data-s="offen">
+          <td class="nr">2</td>
+          <td class="art">Sitzung</td>
+          <td>Beispiel: Zusage der Sitzung -- Anhang folgt nach Freigabe.</td>
+          <td>vermerkt in Kapitel 3</td>
+          <td><span class="chip chip-offen">offen</span></td>
+        </tr>
+        <tr data-s="rot">
+          <td class="nr">3</td>
+          <td class="art">Owner</td>
+          <td>Beispiel: Tabelle mit den Messwerten.</td>
+          <td><span class="leer">keine</span></td>
+          <td><span class="chip chip-rot">ROTER BEFUND</span></td>
+        </tr>
+        <tr data-s="verworfen">
+          <td class="nr">4</td>
+          <td class="art">Owner</td>
+          <td>Beispiel: Kapitel Ausblick.</td>
+          <td>verworfen am 01.01. auf Owner-Entscheid ("brauchen wir nicht") -- Fundstelle: Chatverlauf</td>
+          <td><span class="chip chip-verworfen">verworfen</span></td>
+        </tr>
+        <!-- ZEILEN-ENDE -->
+      </tbody>
+    </table>
+  </div>
+  <h2>Blockaden des Stop-Hooks</h2>
+  <!-- BLOCKADEN-ANFANG: je Protokollzeile eine Karte, sonst der leer-Satz -->
+  <div class="blockade">
+    <time>01.01.2026 00:00 · BEISPIEL-SITZUNG</time>
+    <p>Beispielgrund aus blockprotokoll.jsonl</p>
+  </div>
+  <!-- BLOCKADEN-ENDE -->
+  <footer>Die Kacheln filtern nach Status. Die Liste führt beide Sprecher:
+    Owner-Forderungen und Zusagen der Sitzung. Eine Position ohne Fundstelle ist
+    ein roter Befund; Verworfenes bleibt mit Grund in der Liste stehen und wird
+    nie stillschweigend entfernt. Blockaden stammen aus
+    blockprotokoll.jsonl (gemessen); die Eingangsliste ist aus dem
+    Gesprächsverlauf rekonstruiert.</footer>
+</main>
+<script>
+  // Zugabe, kein Träger: ohne dieses Skript ist die Seite vollständig lesbar.
+  for (const kachel of document.querySelectorAll(".kachel")) {
+    kachel.addEventListener("click", () => {
+      const wert = kachel.dataset.filter || "";
+      for (const k of document.querySelectorAll(".kachel")) k.classList.toggle("aktiv", k === kachel);
+      for (const zeile of document.querySelectorAll("tr[data-s]")) {
+        zeile.dataset.verborgen = wert && zeile.dataset.s !== wert ? "ja" : "nein";
+      }
+    });
+  }
+</script>
