@@ -86,3 +86,24 @@ Aktuelle Ausgabe: Kit 23.0, Prüfprogramm 4.12.
 ## Lizenz
 
 MIT, siehe [LICENSE](LICENSE).
+
+## Work-discipline skills: source-required and nothing-missed
+
+Two further skills ship in `skills/`, usable with any assistant:
+
+- **source-required** -- no number without its source: every claim is marked
+  as measured (with source), judgement or unverified; denials need named
+  attempts, absence claims need a search space, handovers need complete,
+  self-verified addresses. Language-free via the `[QC]` evidence block.
+- **nothing-missed** -- no document from memory: pull the numbered intake
+  list from the conversation first, write against it, hand over with a
+  per-item reference (`INTAKE:` / `REF:` in any language).
+
+Each folder is ready for the claude.ai skill upload (zip the folder, one
+top-level directory with `SKILL.md` inside). `references/wohin.md` in each
+skill explains which file to paste into ChatGPT, GitHub Copilot or Gemini;
+the enforcement hooks for Claude Code live under `scripts/`.
+
+Deutsch: beide Ordner sind fertig für den Skill-Upload von Claude; die Datei
+`references/wohin.md` je Skill erklärt, welche Fassung in ChatGPT, Copilot
+oder Gemini gehört.
