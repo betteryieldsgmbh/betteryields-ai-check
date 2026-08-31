@@ -1,6 +1,16 @@
 # betteryields AI-Check
 
-A deterministic checker for AI answers about documents. Deutsche Fassung weiter unten.
+Three free skills that make AI answers checkable. Deutsche Fassung weiter unten.
+
+| Skill | What it enforces | Folder |
+|---|---|---|
+| **ai-checker** | An answer about a document is verified against the document itself, quote by quote, with a hard ACCEPTED/REJECTED verdict | [`skills/ai-checker`](skills/ai-checker) |
+| **source-required** | No number without its source: every claim is marked as measured, judgement or unverified; works in any language via the `[QC]` evidence block | [`skills/source-required`](skills/source-required) |
+| **nothing-missed** | No document from memory: intake list from the conversation first, hand-over with a reference per item (`INTAKE:` / `REF:`) | [`skills/nothing-missed`](skills/nothing-missed) |
+
+All three run with Claude; source-required and nothing-missed also ship paste-in
+variants for ChatGPT, GitHub Copilot and Gemini (see `references/wohin.md` in each
+folder). The sections below describe the ai-checker in detail.
 
 ## What it does
 
