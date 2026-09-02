@@ -39,7 +39,7 @@ _ZITAT = re.compile(r'"[^"\n]{1,80}"')
 # "gemessen (docs/bericht.md, Zeile 12)". Absolute Pfade und URLs bleiben
 # ungeprüft: sie können auf fremde Rechner oder das Netz zeigen. Der
 # Rueckblick schliesst auch den Bindestrich aus, sonst wird aus dem absoluten
-# "/pfad/zum/projekt/x.py" das scheinbar relative
+# "/home/someone/project/x.py" das scheinbar relative
 # "quality-control/x.py" herausgelesen.
 _GEMESSEN_KLAMMER = re.compile(r"gemessen\s*\(([^)]{1,300})\)", re.IGNORECASE)
 _RELATIVER_PFAD = re.compile(r"(?<![\w/-])((?:[\w.-]+/)+[\w.-]+\.[A-Za-z0-9]{1,8})")

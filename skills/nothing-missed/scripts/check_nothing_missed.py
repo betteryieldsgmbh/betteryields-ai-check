@@ -1,8 +1,10 @@
 """Stop-Hook des Plugins nothing-missed: kein Dokument ohne Abnahme.
 
 Läuft nach jeder fertigen Antwort. Wurde in diesem Zug ein Dokument
-geschrieben (eine Markdown- oder Textdatei über die Schreibwerkzeuge) oder
-liefert der Zug selbst ein langes, gegliedertes Dokument im Chat, dann muss
+geschrieben (eine Markdown-, Text- oder HTML-Datei über die Schreibwerkzeuge),
+etwas übergeben (ein Artefakt veröffentlicht, eine Datei geschickt -- egal
+welcher Art) oder liefert der Zug selbst ein langes, gegliedertes Dokument im
+Chat, dann muss
 irgendwo im Zug die Eingangsliste mit Fundstellen stehen -- sonst wird die
 Antwort abgelehnt und die Sitzung muss die Abnahme nachreichen.
 
@@ -29,7 +31,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 SCHREIBWERKZEUGE = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
-DOKUMENT_ENDUNGEN = (".md", ".rst", ".txt", ".adoc")
+DOKUMENT_ENDUNGEN = (".md", ".rst", ".txt", ".adoc", ".html", ".htm")
+
+# Werkzeuge, deren Aufruf eine Übergabe IST -- unabhängig von der Endung
+# (die Frage ist nicht "welche Endung", sondern "übergibst du gerade
+# etwas"). Eine HTML-Seite ist ein Dokument wie jedes andere. Artifact zählt
+# nur beim Veröffentlichen; lesen, auflisten und kommentieren nicht.
+UEBERGABEWERKZEUGE = {"SendUserFile"}
+_ARTIFACT = "Artifact"
 
 # Ein Chat-Dokument: lang und gegliedert. Die Schwellen sind bewusst hoch,
 # damit gewöhnliche lange Antworten nicht getroffen werden.
@@ -112,6 +121,16 @@ def _schreibt_dokument(eingabe: object) -> bool:
     return isinstance(pfad, str) and pfad.lower().endswith(DOKUMENT_ENDUNGEN)
 
 
+def _uebergibt(name: object, eingabe: object) -> bool:
+    """Return True when a tool call hands something to the user, whatever its type."""
+    if name in UEBERGABEWERKZEUGE:
+        return True
+    if name == _ARTIFACT:
+        aktion = eingabe.get("action") if isinstance(eingabe, dict) else None
+        return aktion in (None, "", "publish")
+    return False
+
+
 def zug_auswerten(protokollpfad: Path) -> tuple[str, bool]:
     """Return (all assistant text of the current turn, was a document written).
 
@@ -141,10 +160,9 @@ def zug_auswerten(protokollpfad: Path) -> tuple[str, bool]:
                 continue
             if block.get("type") == "text":
                 texte.append(str(block.get("text", "")))
-            elif (
-                block.get("type") == "tool_use"
-                and block.get("name") in SCHREIBWERKZEUGE
-                and _schreibt_dokument(block.get("input"))
+            elif block.get("type") == "tool_use" and (
+                (block.get("name") in SCHREIBWERKZEUGE and _schreibt_dokument(block.get("input")))
+                or _uebergibt(block.get("name"), block.get("input"))
             ):
                 geschrieben = True
     return "\n\n".join(teil for teil in texte if teil), geschrieben

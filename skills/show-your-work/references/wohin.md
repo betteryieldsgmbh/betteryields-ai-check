@@ -1,9 +1,9 @@
-# Welche Datei wohin -- source-required für jeden Assistenten
+# Welche Datei wohin -- show-your-work für jeden Assistenten
 
-Dieses Paket trägt denselben Skill in mehreren Fassungen. Die Prüfregeln sind
+Dieses Paket trägt denselben Skill in mehreren Fassungen. Die Regeln sind
 überall dieselben; nur der Weg der Installation unterscheidet sich. Die
 AUTOMATISCHE Blockade (Stop-Hook) gibt es nur bei Claude -- bei allen anderen
-gilt die Anweisung, und der Belegblock macht die Antworten von Hand prüfbar.
+gilt die Anweisung, und der Lieferblock macht die Übergaben von Hand prüfbar.
 
 | Assistent | Datei | Weg |
 |---|---|---|

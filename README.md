@@ -7,8 +7,9 @@ Three free skills that make AI answers checkable. Deutsche Fassung weiter unten.
 | **ai-checker** | An answer about a document is verified against the document itself, quote by quote, with a hard ACCEPTED/REJECTED verdict | [`skills/ai-checker`](skills/ai-checker) |
 | **source-required** | No number without its source: every claim is marked as measured, judgement or unverified; works in any language via the `[QC]` evidence block | [`skills/source-required`](skills/source-required) |
 | **nothing-missed** | No document from memory: intake list from the conversation first, hand-over with a reference per item (`INTAKE:` / `REF:`) | [`skills/nothing-missed`](skills/nothing-missed) |
+| **show-your-work** | The workshop report for AI: every hand-over names the exact object delivered, the check that ran on that same object and the full scale of the result (`[SHIPPED]` block) | [`skills/show-your-work`](skills/show-your-work) |
 
-All three run with Claude; source-required and nothing-missed also ship paste-in
+All four run with Claude; source-required, nothing-missed and show-your-work also ship paste-in
 variants for ChatGPT, GitHub Copilot and Gemini (see `references/wohin.md` in each
 folder). The sections below describe the ai-checker in detail.
 
@@ -97,7 +98,7 @@ Aktuelle Ausgabe: Kit 23.0, Prüfprogramm 4.12.
 
 MIT, siehe [LICENSE](LICENSE).
 
-## Work-discipline skills: source-required and nothing-missed
+## Work-discipline skills: source-required, nothing-missed and show-your-work
 
 Two further skills ship in `skills/`, usable with any assistant:
 
@@ -105,6 +106,9 @@ Two further skills ship in `skills/`, usable with any assistant:
   as measured (with source), judgement or unverified; denials need named
   attempts, absence claims need a search space, handovers need complete,
   self-verified addresses. Language-free via the `[QC]` evidence block.
+- **show-your-work** -- the workshop report for AI: every hand-over names the
+  object delivered, the check that ran on that same object and the full scale
+  of the result, as a `[SHIPPED]` block the enclosed script enforces.
 - **nothing-missed** -- no document from memory: pull the numbered intake
   list from the conversation first, write against it, hand over with a
   per-item reference (`INTAKE:` / `REF:` in any language).

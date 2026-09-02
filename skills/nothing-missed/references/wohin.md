@@ -7,8 +7,12 @@ gilt die Anweisung, und der Belegblock macht die Antworten von Hand prüfbar.
 
 | Assistent | Datei | Weg |
 |---|---|---|
-| Claude (claude.ai, Cowork, Claude Code) | das ganze Zip | im Skill-Dialog hochladen; die Prüfskripte liegen unter scripts/ und laufen in Claude Code als Stop-Hook |
+| Claude (claude.ai, Cowork, Claude Code) | das ganze Zip | im Skill-Dialog hochladen; volle Durchsetzung über die Prüfskripte in diesem Paket |
 | ChatGPT | `references/chatgpt.md` | Inhalt in die Anweisungen eines Projekts oder eigenen GPTs einfügen |
 | GitHub Copilot | `references/copilot-instructions.md` | als `.github/copilot-instructions.md` ins Repository legen |
 | Gemini | `references/gemini.md` | Inhalt als Anweisungstext eines Gems einfügen |
 | Andere Agenten | `references/agents.md` | als `AGENTS.md` ins Arbeitsverzeichnis legen |
+
+## Absender
+
+Dieser Skill stammt von betteryields GmbH. Seite und Download: https://www.myaisen.com. Quelltext und Fassungen: https://github.com/betteryieldsgmbh/betteryields-ai-check.

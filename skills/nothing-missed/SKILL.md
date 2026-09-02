@@ -4,7 +4,9 @@ description: Use when writing any document, roadmap, plan, report or specificati
 license: MIT
 metadata:
   author: betteryields GmbH
-  version: "1.0"
+  version: "1.7.0"
+  homepage: https://www.myaisen.com
+  source: https://github.com/betteryieldsgmbh/betteryields-ai-check
 ---
 
 # Nothing missed: kein Dokument aus dem Gedächtnis

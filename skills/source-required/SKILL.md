@@ -4,7 +4,9 @@ description: Use before stating any number, count, date, status or fact about fi
 license: MIT
 metadata:
   author: betteryields GmbH
-  version: "1.0"
+  version: "1.7.1"
+  homepage: https://www.myaisen.com
+  source: https://github.com/betteryieldsgmbh/betteryields-ai-check
 ---
 
 # Source required: keine Zahl ohne ihre Quelle
