@@ -1,0 +1,22 @@
+{
+  "skills": {
+    "source-required": {
+      "artifact": "source-required.skill",
+      "version": "1.7.1",
+      "sha256": "4c5701f0339974b34a5fce2b7f23a7149c4cf90365e2ff096622f3e50dee5eb2",
+      "bytes": 41989
+    },
+    "nothing-missed": {
+      "artifact": "nothing-missed.skill",
+      "version": "1.7.0",
+      "sha256": "93ab5306c2900b7a47adcd8fa604fe397c7fc8754306135a6e7a3abe6640cfc7",
+      "bytes": 34175
+    },
+    "show-your-work": {
+      "artifact": "show-your-work.skill",
+      "version": "1.0.0",
+      "sha256": "8dd940bc0974076d34c50c9b53cb526de3b4cea424f038340d8fafc9241589b9",
+      "bytes": 28023
+    }
+  }
+}
